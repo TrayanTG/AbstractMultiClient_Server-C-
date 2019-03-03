@@ -17,9 +17,12 @@ class CtcpServer
 	int						_port;
 	fd_set					_clientList;
 	MessageReceivedHandler	MessageReceived;
-
-	// Create a socket
+	
 	SOCKET createSocket();
+
+	SOCKET Accept(int listening);
+
+	void disconnectClient(int sock);
 
 public:
 
