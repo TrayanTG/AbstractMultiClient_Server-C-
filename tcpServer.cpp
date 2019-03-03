@@ -16,7 +16,7 @@ void CtcpServer::Send(int senderSocket, int listeningSocket, fd_set &clients, st
 	for (int i = 0;i < _clientList.fd_count;i++)
 	{
 		SOCKET sock = _clientList.fd_array[i];
-		if (sock != senderSocket && sock!=listeningSocket)
+		if (sock != senderSocket && sock != listeningSocket)
 		{
 			send(sock, msg.c_str(), msg.size() + 1, 0);
 		}
@@ -56,7 +56,7 @@ void CtcpServer::Run()
 			SOCKET sock = tempClientList.fd_array[i];
 			if (sock == listening)
 			{
-				SOCKET newClient = accept(listening, nullptr, nullptr);
+				SOCKET newClient = Accept(listening);
 
 				FD_SET(newClient, &_clientList);
 
@@ -76,8 +76,7 @@ void CtcpServer::Run()
 				int bytesReceived = recv(sock, buf, MAX_BUFFER_SIZE, 0);
 				if (bytesReceived <= 0)
 				{
-					closesocket(sock);
-					FD_CLR(sock, &_clientList);
+					disconnectClient(sock);
 				}
 				else
 				{
@@ -89,6 +88,13 @@ void CtcpServer::Run()
 			}
 		}
 	}
+}
+
+void CtcpServer::disconnectClient(int sock)
+{
+	std::cout << "Someone DCed!\n";
+	closesocket(sock);
+	FD_CLR(sock, &_clientList);
 }
 
 // Clean up
@@ -124,4 +130,29 @@ SOCKET CtcpServer::createSocket()
 		}
 	}
 	return listening;
+}
+
+SOCKET CtcpServer::Accept(int listening)
+{
+	sockaddr_in clientInfo;
+	int clientSize = sizeof(clientInfo);
+
+	SOCKET newClient = accept(listening, (sockaddr*)&clientInfo, &clientSize);
+
+	char host[NI_MAXHOST];		// Client's remote name
+	char service[NI_MAXSERV];	// Service (port) the client is connected on
+
+	memset(host, 0, NI_MAXHOST);
+	memset(service, 0, NI_MAXSERV);
+
+	if (getnameinfo((sockaddr*)&clientInfo, sizeof(clientInfo), host, NI_MAXHOST, service, NI_MAXSERV, 0) == 0)
+	{
+		std::cout << host << " connected on port " << service << std::endl;
+	}
+	else
+	{
+		inet_ntop(AF_INET, &clientInfo.sin_addr, host, NI_MAXHOST);
+		std::cout << host << " connceted on port " << ntohs(clientInfo.sin_port) << std::endl;
+	}
+	return newClient;
 }
